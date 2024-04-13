@@ -1,0 +1,3 @@
+﻿services:
+  filmsyncbot:
+    image: filmsyncbot
