@@ -1,0 +1,9 @@
+﻿services:
+  filmsyncbot:
+    image: ghcr.io/omssky/filmsyncbot:latest
+    container_name: filmsync_bot
+    build:
+      context: .
+      dockerfile: FilmSyncBot/Dockerfile
+    environment:
+      BotOptions__BotToken: "${BOT_TOKEN}"

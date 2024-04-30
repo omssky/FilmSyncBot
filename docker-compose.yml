@@ -1,6 +1,0 @@
-﻿services:
-  filmsyncbot:
-    image: filmsyncbot
-    build:
-      context: .
-      dockerfile: FilmSyncBot/Dockerfile

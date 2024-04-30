@@ -1,0 +1,55 @@
+name: Deploy latest image
+
+on:
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  WORKDIR: ~/deploy/${{ github.event.repository.name }}/
+  BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+
+jobs:
+  sync:
+    name: Sync docker-compose and configs via rsync
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sync compose
+        uses: easingthemes/ssh-deploy@v5.0.3
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgDzvc -i --delete --progress"
+          SOURCE: "docker-compose.yaml"
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          TARGET: ${{ env.WORKDIR }}
+
+      - name: Sync configs
+        uses: easingthemes/ssh-deploy@v5.0.3
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          ARGS: "-rlgDzvc -i --delete --progress"
+          SOURCE: "FilmSyncBot/appsettings.json"
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          TARGET: ${{ env.WORKDIR }}
+
+  deploy:
+    needs: sync
+    name: Run latest image on server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Do docker-compose up using SSH key
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: BOT_TOKEN
+          script: |
+            cd ${{ env.WORKDIR }}
+            tree
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker-compose pull && docker-compose up --force-recreate -d
